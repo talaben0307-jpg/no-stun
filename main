@@ -1,0 +1,82 @@
+-- JJS / Universal Anti-Stun Script with Fluent UI
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local LocalPlayer = Players.LocalPlayer
+
+-- Load thư viện Fluent UI
+local Fluent = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
+
+local Window = Fluent:CreateWindow({
+    Title = "Anti-Stun Hub",
+    SubTitle = "⚡ Combat Protection",
+    TabWidth = 160,
+    Size = UDim2.fromOffset(480, 320),
+    Acrylic = true,
+    Theme = "Dark",
+    MinimizeKey = Enum.KeyCode.RightControl
+})
+
+local Tabs = {
+    Main = Window:AddTab({ Title = "Protection", Icon = "shield" })
+}
+
+-- Biến trạng thái Anti-Stun
+local antiStunActive = false
+
+Tabs.Main:AddParagraph({
+    Title = "Chống Khựng / Stun",
+    Content = "Giúp nhân vật không bị đóng băng, khựng hình hoặc ngã khi dính đòn tấn công."
+})
+
+-- Toggle Bật/Tắt Anti-Stun
+Tabs.Main:AddToggle("AntiStunToggle", {
+    Title = "Bật/Tắt Anti-Stun",
+    Default = false,
+    Callback = function(Value)
+        antiStunActive = Value
+        if Value then
+            Fluent:Notify({ Title = "Anti-Stun", Content = "Đã BẬT bảo vệ chống khựng!", Duration = 2 })
+        else
+            Fluent:Notify({ Title = "Anti-Stun", Content = "Đã TẮT bảo vệ!", Duration = 2 })
+        end
+    end
+})
+
+-- Vòng lặp liên tục dập tắt trạng thái Stun / PlatformStand
+RunService.Stepped:Connect(function()
+    if antiStunActive then
+        pcall(function()
+            local char = LocalPlayer.Character
+            if char then
+                local humanoid = char:FindFirstChildOfClass("Humanoid")
+                if humanoid then
+                    -- Ngăn chặn nhân vật bị rơi vào trạng thái PlatformStand (thường bị gạt ngã/stun)
+                    if humanoid.PlatformStand then
+                        humanoid.PlatformStand = false
+                    end
+                    
+                    -- Chặn các trạng thái bị khóa cứng (Stun State) nếu game sử dụng HumanoidStates chuẩn
+                    humanoid:SetStateEnabled(Enum.HumanoidStateType.Stun, false)
+                    humanoid:SetStateEnabled(Enum.HumanoidStateType.Ragdoll, false)
+                end
+                
+                -- Xóa các thẻ (tags/attributes) gây stun phổ biến nếu có trong Character
+                for _, child in ipairs(char:GetChildren()) do
+                    if child:IsA("StringValue") or child:IsA("BoolValue") then
+                        local name = string.lower(child.Name)
+                        if string.find(name, "stun") or string.find(name, "ragdoll") or string.find(name, "flung") then
+                            child:Destroy()
+                        end
+                    end
+                end
+            end
+        end)
+    end
+end)
+
+Window:SelectTab(1)
+Fluent:Notify({
+    Title = "Thành công",
+    Content = "Script Anti-Stun đã sẵn sàng!",
+    Duration = 3
+})
